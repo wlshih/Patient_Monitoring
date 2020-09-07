@@ -25,9 +25,18 @@ public class Quiz {
 			int i = 0;
 			while((line = file.readLine()) != null) {
 				// patient
+				Patient p;
 				String patient_name = line.split(" ")[1];
-				int period = Integer.parseInt(line.split(" ")[2]);
-				Patient p = new Patient(i, patient_name, period);
+				int patient_id = searchId(patient_ordered_list, patient_name);
+				if(patient_id != -1) { // found patient in list
+					p = patient_ordered_list.get(patient_id);
+				}
+				else {
+					patient_id = i++;
+					int period = Integer.parseInt(line.split(" ")[2]);
+					p = new Patient(patient_id, patient_name, period);
+					patient_ordered_list.add(p);
+				}
 				// System.out.println(p.name);
 				// System.out.println(p.period);
 				
@@ -46,8 +55,6 @@ public class Quiz {
 				// System.out.println(d.safe_range_lower_bound);
 				// System.out.println(d.safe_range_upper_bound);
 
-				patient_ordered_list.add(p);
-				i++;
 			}
 
 			file.close();
@@ -58,6 +65,16 @@ public class Quiz {
 		}
 
 		return patient_ordered_list;
+	}
+
+	// search for name in the given arraylist, and return the index of the object
+	static int searchId(List<Patient> list, String name) {
+		int id = 0;
+		for(Patient p : list) {
+			if(name.equals(p.name))
+				return id;
+		}
+		return -1;
 	}
 
 	public static void main(String[] args) {
@@ -89,14 +106,16 @@ public class Quiz {
 
 		for(Patient p : patient_ordered_list) {
 			System.out.printf("patient %s\n", p.name);
-			System.out.printf("%s %s\n", p.device.category, p.device.name);
-			for(int t = 0, i = 0; t <= monitor_period; t += p.period, i++) {
-				int val;
-				if(i < p.device.dataset.size())
-					val = p.device.dataset.get(i);
-				else
-					val = -1;
-				System.out.printf("[%d] %d\n", p.period, val);
+			for(Device d : p.device) {
+				System.out.printf("%s %s\n", d.category, d.name);
+				for(int t = 0, i = 0; t <= monitor_period; t += p.period, i++) {
+					int val;
+					if(i < d.dataset.size())
+						val = d.dataset.get(i);
+					else
+						val = -1;
+					System.out.printf("[%d] %.1f\n", t, (float)val);
+				}
 			}
 
 		}
@@ -120,7 +139,7 @@ class Patient {
 	String name;
 	int period;
 	int next_mesure;
-	Device device;
+	List<Device> device;
 
 	// class constructor
 	Patient(int id, String name, int period) {
@@ -128,9 +147,10 @@ class Patient {
 		this.name = name;
 		this.period = period;
 		this.next_mesure = 0;
+		this.device = new ArrayList<Device>();
 	}
 	void attach(Device device) {
-		this.device = device;
+		this.device.add(device);
 	}
 
 	boolean timeExpired(int timestamp) {
@@ -138,14 +158,17 @@ class Patient {
 	}
 	void mesure(int timestamp) {
 		next_mesure = timestamp + period;
-		if(device.alarm())
-			if(device.currentValue() == -1)
-				System.out.printf("[%d] %s falls\n", timestamp, device.name);
-			else
-				System.out.printf("[%d] %s is in danger! Cause: %s %.1f\n", timestamp, name, device.name, (float)device.currentValue());
+		// mesure all devices attached to the patients
+		for(Device d : device) {
+			if(d.alarm())
+				if(d.currentValue() == -1)
+					System.out.printf("[%d] %s falls\n", timestamp, d.name);
+				else
+					System.out.printf("[%d] %s is in danger! Cause: %s %.1f\n", timestamp, name, d.name, (float)d.currentValue());
 
-		device.count++;
-
+			d.count++;
+		}
+		////
 	}
 }
 
