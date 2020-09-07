@@ -23,37 +23,34 @@ public class Quiz {
 			monitor_period = Integer.parseInt(line);
 
 			int i = 0;
+			Patient p = null;
 			while((line = file.readLine()) != null) {
 				// patient
-				Patient p;
-				String patient_name = line.split(" ")[1];
-				int patient_id = searchId(patient_ordered_list, patient_name);
-				if(patient_id != -1) { // found patient in list
-					p = patient_ordered_list.get(patient_id);
-				}
-				else {
-					patient_id = i++;
+				if(line.split(" ").length == 3) {
+					int patient_id = i++;
+					String patient_name = line.split(" ")[1];
 					int period = Integer.parseInt(line.split(" ")[2]);
 					p = new Patient(patient_id, patient_name, period);
 					patient_ordered_list.add(p);
+					// System.out.println(p.name);
+					// System.out.println(p.period);
 				}
-				// System.out.println(p.name);
-				// System.out.println(p.period);
-				
+
 				// device attached to the patient
-				line = file.readLine();
-				String category = line.split(" ")[0];
-				String device_name = line.split(" ")[1];
-				String dataset_file = line.split(" ")[2];
-				int lower_bound = Integer.parseInt(line.split(" ")[3]);
-				int upper_bound = Integer.parseInt(line.split(" ")[4]);
-				Device d = new Device(category, device_name, dataset_file, lower_bound, upper_bound);
-				p.attach(d);
-				// System.out.println(d.category);
-				// System.out.println(d.name);
-				// System.out.println(d.factor_dataset_file);
-				// System.out.println(d.safe_range_lower_bound);
-				// System.out.println(d.safe_range_upper_bound);
+				else {
+					String category = line.split(" ")[0];
+					String device_name = line.split(" ")[1];
+					String dataset_file = line.split(" ")[2];
+					int lower_bound = Integer.parseInt(line.split(" ")[3]);
+					int upper_bound = Integer.parseInt(line.split(" ")[4]);
+					Device d = new Device(category, device_name, dataset_file, lower_bound, upper_bound);
+					p.attach(d);
+					// System.out.println(d.category);
+					// System.out.println(d.name);
+					// System.out.println(d.factor_dataset_file);
+					// System.out.println(d.safe_range_lower_bound);
+					// System.out.println(d.safe_range_upper_bound);
+				}
 
 			}
 
@@ -67,15 +64,15 @@ public class Quiz {
 		return patient_ordered_list;
 	}
 
-	// search for name in the given arraylist, and return the index of the object
-	static int searchId(List<Patient> list, String name) {
-		int id = 0;
-		for(Patient p : list) {
-			if(name.equals(p.name))
-				return id;
-		}
-		return -1;
-	}
+	// // search for name in the given arraylist, and return the index of the object
+	// static int searchId(List<Patient> list, String name) {
+	// 	int id = 0;
+	// 	for(Patient p : list) {
+	// 		if(name.equals(p.name))
+	// 			return id;
+	// 	}
+	// 	return -1;
+	// }
 
 	public static void main(String[] args) {
 
