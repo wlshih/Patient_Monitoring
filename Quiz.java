@@ -41,8 +41,8 @@ public class Quiz {
 					String category = line.split(" ")[0];
 					String device_name = line.split(" ")[1];
 					String dataset_file = line.split(" ")[2];
-					int lower_bound = Integer.parseInt(line.split(" ")[3]);
-					int upper_bound = Integer.parseInt(line.split(" ")[4]);
+					double lower_bound = Double.parseDouble(line.split(" ")[3]);
+					double upper_bound = Double.parseDouble(line.split(" ")[4]);
 					Device d = new Device(category, device_name, dataset_file, lower_bound, upper_bound);
 					p.attach(d);
 					// System.out.println(d.category);
@@ -106,12 +106,12 @@ public class Quiz {
 			for(Device d : p.device) {
 				System.out.printf("%s %s\n", d.category, d.name);
 				for(int t = 0, i = 0; t <= monitor_period; t += p.period, i++) {
-					int val;
+					double val;
 					if(i < d.dataset.size())
 						val = d.dataset.get(i);
 					else
 						val = -1;
-					System.out.printf("[%d] %.1f\n", t, (float)val);
+					System.out.printf("[%d] %s\n", t, Double.toString(val));
 				}
 			}
 
@@ -161,7 +161,7 @@ class Patient {
 				if(d.currentValue() == -1)
 					System.out.printf("[%d] %s falls\n", timestamp, d.name);
 				else
-					System.out.printf("[%d] %s is in danger! Cause: %s %.1f\n", timestamp, name, d.name, (float)d.currentValue());
+					System.out.printf("[%d] %s is in danger! Cause: %s %s\n", timestamp, name, d.name, Double.toString(d.currentValue()));
 
 			d.count++;
 		}
@@ -173,13 +173,13 @@ class Device {
 	String category;
 	String name;
 	String factor_dataset_file;
-	int safe_range_lower_bound;
-	int safe_range_upper_bound;
-	List<Integer> dataset;
+	double safe_range_lower_bound;
+	double safe_range_upper_bound;
+	List<Double> dataset;
 	int count; // for counting in dataset
 
 	// class constructor
-	Device(String category, String name, String dataset_file, int lower_bound, int upper_bound) {
+	Device(String category, String name, String dataset_file, double lower_bound, double upper_bound) {
 		this.category = category;
 		this.name = name;
 		this.factor_dataset_file = dataset_file;
@@ -199,7 +199,7 @@ class Device {
 			// System.out.println("*");
 
 			while(line != null) {
-				dataset.add(Integer.parseInt(line));
+				dataset.add(Double.parseDouble(line));
 				line = file.readLine();
 			}
 
@@ -212,14 +212,14 @@ class Device {
 
 	// return true if data is out of bounds
 	boolean alarm() {
-		int val = currentValue();
+		double val = currentValue();
 		if(val == -1) return true;
 		else if(val < safe_range_lower_bound) return true;
 		else if(val > safe_range_upper_bound) return true;
 		else return false;
 	}
 
-	int currentValue() {
+	double currentValue() {
 		if(count < dataset.size())
 			return dataset.get(count);
 		else return -1;
