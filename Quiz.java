@@ -1,21 +1,12 @@
-import java.io.Reader;
-import java.io.FileReader;
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.util.List;
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.PriorityQueue;
+import java.util.*;
+import java.io.*;
 
 public class Quiz {
-
-	public static int monitor_period;
-
-	// read data from input file and store into patient_ordered_list
-	static List<Patient> readInput(String filename) {
-
-		List<Patient> patient_ordered_list = new ArrayList<>();
-
+	static int monitor_period = 0;
+	static List<Patient> patient_list;
+	static PriorityQueue<Patient> patient_queue;
+	
+	static void readFile(String filename) {
 		BufferedReader file;
 		try {
 			file = new BufferedReader(new FileReader(filename));
@@ -27,145 +18,114 @@ public class Quiz {
 			while((line = file.readLine()) != null) {
 				// patient
 				if(line.split(" ").length == 3) {
-					int patient_id = i++;
-					String patient_name = line.split(" ")[1];
+					// System.out.println(line);
+					String name = line.split(" ")[1];
 					int period = Integer.parseInt(line.split(" ")[2]);
-					p = new Patient(patient_id, patient_name, period);
-					patient_ordered_list.add(p);
-					// System.out.println(p.name);
-					// System.out.println(p.period);
-				}
 
-				// device attached to the patient
+					// error input
+					if(period <= 0){
+						System.out.println("Input Error");
+						continue;
+					}
+					p = new Patient(i++, name, period);
+					patient_list.add(p);
+				}
+				// device
 				else {
 					String category = line.split(" ")[0];
-					String device_name = line.split(" ")[1];
+					String name = line.split(" ")[1];
 					String dataset_file = line.split(" ")[2];
 					double lower_bound = Double.parseDouble(line.split(" ")[3]);
 					double upper_bound = Double.parseDouble(line.split(" ")[4]);
-					Device d = new Device(category, device_name, dataset_file, lower_bound, upper_bound);
-					p.attach(d);
-					// System.out.println(d.category);
-					// System.out.println(d.name);
-					// System.out.println(d.factor_dataset_file);
-					// System.out.println(d.safe_range_lower_bound);
-					// System.out.println(d.safe_range_upper_bound);
+					Device d = new Device(category, name, dataset_file, lower_bound, upper_bound);
+					p.device.add(d);
 				}
-
 			}
-
 			file.close();
-
 		}
 		catch(IOException e) {
 			e.printStackTrace();
 		}
-
-		return patient_ordered_list;
 	}
 
-	// // search for name in the given arraylist, and return the index of the object
-	// static int searchId(List<Patient> list, String name) {
-	// 	int id = 0;
-	// 	for(Patient p : list) {
-	// 		if(name.equals(p.name))
-	// 			return id;
-	// 	}
-	// 	return -1;
-	// }
-
-	public static void main(String[] args) {
-
-		List<Patient> patient_ordered_list = readInput(args[0]);
-
-		// store patient_ordered_list into patient_list which is a pq
-		// for selecting the next patient
-		PriorityQueue<Patient> patient_list = new PriorityQueue<>(11, new MonitorComparator());
-		patient_list.addAll(patient_ordered_list);
-
-		int timestamp = 0;
-		while(timestamp <= monitor_period) {
-			// check the next mesure period of patients
-			while(patient_list.peek().timeExpired(timestamp)) {
-				Patient temp = patient_list.poll();
-				temp.mesure(timestamp);
-				patient_list.add(temp);
-			}
-
-			timestamp ++;
-		}
-
-		// timestamp reach monitor period
-		// system finish monitoring
-		// show factorDatabase contents
-
-		// ugly code
-
-		for(Patient p : patient_ordered_list) {
+	static void printPatient() {
+		for(Patient p : patient_list) {
 			System.out.printf("patient %s\n", p.name);
 			for(Device d : p.device) {
 				System.out.printf("%s %s\n", d.category, d.name);
-				for(int t = 0, i = 0; t <= monitor_period; t += p.period, i++) {
-					double val;
-					if(i < d.dataset.size())
-						val = d.dataset.get(i);
-					else
-						val = -1;
+				for(int i=0, t=0; t <= monitor_period; t += p.period, i++) {
+					double val = (i < d.data.size()) ? d.data.get(i) : -1;
 					System.out.printf("[%d] %s\n", t, Double.toString(val));
 				}
 			}
-
 		}
 	}
-}
 
+	public static void main(String[] args) {
+		patient_list = new ArrayList<>();
+		patient_queue = new PriorityQueue<>(11, new MonitorComparator());
 
+		readFile(args[0]);
+		
+		patient_queue.addAll(patient_list);
 
-// implements of comparator in the priority queue
-class MonitorComparator implements Comparator<Patient> {
-	public int compare(Patient p1, Patient p2) {
-		if(p1.next_mesure == p2.next_mesure) return (p1.id - p2.id);
-		else return (p1.next_mesure - p2.next_mesure);
+		int timestamp = 0;
+		while(timestamp <= monitor_period) {
+			while(patient_queue.peek().timeExpired(timestamp)) { // check through every patient mesuring at the same time
+				Patient p = patient_queue.poll();
+				p.measure(timestamp);
+				patient_queue.add(p);
+			}
+			timestamp++;
+		}
+
+		printPatient();
+
 	}
 }
 
-
+class MonitorComparator implements Comparator<Patient> {
+	public int compare(Patient a, Patient b) {
+		if(a.next_mesure == b.next_mesure) return a.id - b.id;
+		return a.next_mesure - b.next_mesure;
+	}
+}
 
 class Patient {
 	int id;
 	String name;
 	int period;
 	int next_mesure;
-	List<Device> device;
+	ArrayList<Device> device;
 
-	// class constructor
+	Patient() {}
 	Patient(int id, String name, int period) {
 		this.id = id;
 		this.name = name;
 		this.period = period;
 		this.next_mesure = 0;
-		this.device = new ArrayList<Device>();
-	}
-	void attach(Device device) {
-		this.device.add(device);
+		this.device = new ArrayList<>();
 	}
 
 	boolean timeExpired(int timestamp) {
-		return ((timestamp - next_mesure) == 0);
+		// System.out.print(timestamp);
+		if(timestamp == this.next_mesure) return true;
+		else return false;
 	}
-	void mesure(int timestamp) {
-		next_mesure = timestamp + period;
-		// mesure all devices attached to the patients
-		for(Device d : device) {
-			if(d.alarm())
-				if(d.currentValue() == -1)
+
+	void measure(int timestamp) {
+		// System.out.println(name);
+		next_mesure += period;
+		for(Device d : this.device) {
+			double val = d.getData();
+			if(d.alarm()) {
+				if(val == -1) 
 					System.out.printf("[%d] %s falls\n", timestamp, d.name);
 				else
-					System.out.printf("[%d] %s is in danger! Cause: %s %s\n", timestamp, name, d.name, Double.toString(d.currentValue()));
-
+					System.out.printf("[%d] %s is in danger! Cause: %s %s\n", timestamp, this.name, d.name, Double.toString(val));
+			}
 			d.count++;
 		}
-		////
 	}
 }
 
@@ -175,55 +135,46 @@ class Device {
 	String factor_dataset_file;
 	double safe_range_lower_bound;
 	double safe_range_upper_bound;
-	List<Double> dataset;
-	int count; // for counting in dataset
+	ArrayList<Double> data;
+	int count;
 
-	// class constructor
-	Device(String category, String name, String dataset_file, double lower_bound, double upper_bound) {
+	Device() {}
+	Device(String category, String name, String file, double lower, double upper) {
 		this.category = category;
 		this.name = name;
-		this.factor_dataset_file = dataset_file;
-		this.safe_range_lower_bound = lower_bound;
-		this.safe_range_upper_bound = upper_bound;
-		this.dataset = new ArrayList<>();
-		readData(dataset_file);
+		this.factor_dataset_file = file;
+		this.safe_range_lower_bound = lower;
+		this.safe_range_upper_bound = upper;
+		this.data = new ArrayList<>();
+		readData(file);
 		this.count = 0;
 	}
 
-	// read from dataset file
+
 	void readData(String filename) {
 		BufferedReader file;
 		try {
 			file = new BufferedReader(new FileReader(filename));
 			String line = file.readLine();
-			// System.out.println("*");
-
 			while(line != null) {
-				dataset.add(Double.parseDouble(line));
+				data.add(Double.parseDouble(line));
 				line = file.readLine();
 			}
-
-			file.close();
 		}
 		catch(IOException e) {
 			e.printStackTrace();
 		}
 	}
 
-	// return true if data is out of bounds
+	double getData() {
+		if(this.count >= data.size()) return -1;
+		else return data.get(this.count);
+	}
+
 	boolean alarm() {
-		double val = currentValue();
-		if(val == -1) return true;
-		else if(val < safe_range_lower_bound) return true;
-		else if(val > safe_range_upper_bound) return true;
+		double val = getData();
+		// System.out.println(val);
+		if(val == -1 || safe_range_lower_bound > val || safe_range_upper_bound < val) return true;
 		else return false;
 	}
-
-	double currentValue() {
-		if(count < dataset.size())
-			return dataset.get(count);
-		else return -1;
-	}
-
 }
-
